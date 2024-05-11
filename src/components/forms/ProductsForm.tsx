@@ -46,6 +46,9 @@ const ProductsForm = ({ type, data }: ProductsFormProps) => {
 
 	function onSubmit(values: z.infer<typeof formSchema>) {
 		console.log(values);
+		if (type === 'create' && !data) {
+			console.log('create');
+		}
 	}
 
 	return (

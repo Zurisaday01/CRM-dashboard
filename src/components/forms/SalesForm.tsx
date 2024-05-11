@@ -72,6 +72,9 @@ const SalesForm = ({ type, data }: CustomersFormProps) => {
 
 	function onSubmit(values: z.infer<typeof formSchema>) {
 		console.log(values);
+		if (type === 'create' && !data) {
+			console.log('create');
+		}
 	}
 
 	if (error) return <p>Error: {error}</p>;

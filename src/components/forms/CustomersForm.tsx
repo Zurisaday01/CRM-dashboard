@@ -90,9 +90,10 @@ const CustomersForm = ({ type, data }: CustomersFormProps) => {
 	});
 
 	function onSubmit(values: z.infer<typeof formSchema>) {
-		// Do something with the form values.
-		// ✅ This will be type-safe and validated.
 		console.log(values);
+		if (type === 'create' && !data) {
+			console.log('create');
+		}
 	}
 
 	if (error) return <p>Error: {error}</p>;
