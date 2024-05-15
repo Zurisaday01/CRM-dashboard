@@ -1,3 +1,4 @@
+import { objectToSnake } from 'ts-case-convert';
 import supabase from './supabase';
 
 export const getProducts = async () => {
@@ -25,12 +26,25 @@ export const getProductById = async (id: string) => {
 	return data;
 };
 
+export const createProduct = async (product: Partial<Product>) => {
+	const { data, error } = await supabase
+		.from('products')
+		.insert(objectToSnake(product))
+		.select()
+		.single();
+
+	if (error) {
+		throw new Error('Product could not be created');
+	}
+	return data;
+};
+
 export const updateProduct = async (id: string, product: Partial<Product>) => {
 	const { data, error } = await supabase
 		.from('products')
-		.update(product)
+		.update(objectToSnake(product))
 		.eq('id', id)
-		.select()
+		.select('*')
 		.single();
 
 	if (error) {
@@ -42,11 +56,11 @@ export const updateProduct = async (id: string, product: Partial<Product>) => {
 
 export const deleteProduct = async (id: string) => {
 	// REMEMBER RLS POLICIES
-	const { data, error } = await supabase.from('products').delete().eq('id', id);
+	const { error } = await supabase.from('products').delete().eq('id', id);
 
 	if (error) {
 		console.error(error);
 		throw new Error('Product could not be deleted');
 	}
-	return data;
+	return { id };
 };

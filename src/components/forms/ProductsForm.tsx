@@ -1,3 +1,4 @@
+/* eslint-disable no-mixed-spaces-and-tabs */
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -12,8 +13,13 @@ import {
 	FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { SheetFooter, SheetClose } from '@/components/ui/sheet';
+import { SheetFooter } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { AppDispatch } from '@/state/store';
+import { useDispatch } from 'react-redux';
+import { createProduct, updateProduct } from '@/state/products/productsSlice';
+import toast from 'react-hot-toast';
+import { objectToCamel } from 'ts-case-convert';
 
 const formSchema = z.object({
 	name: z.string().min(2, {
@@ -26,30 +32,62 @@ const formSchema = z.object({
 	stock: z.coerce.number(),
 });
 
-const defaultValues = {
-	name: '',
-	description: '',
-	price: 1,
-	stock: 0,
-};
-
 interface ProductsFormProps {
 	type: 'create' | 'update';
-	data?: User;
+	data?: Product;
 }
 
 const ProductsForm = ({ type, data }: ProductsFormProps) => {
+	const dispatch = useDispatch<AppDispatch>();
+
+	// Default values for the form outside of the form hook
+	const defaultValues =
+		type === 'update' && data
+			? objectToCamel(data)
+			: {
+					name: '',
+					description: '',
+					price: 1,
+					stock: 0,
+			  };
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues,
 	});
 
-	function onSubmit(values: z.infer<typeof formSchema>) {
-		console.log(values);
+	const onSubmit = async (values: z.infer<typeof formSchema>) => {
 		if (type === 'create' && !data) {
-			console.log('create');
+			// use unwrap to get the actual value from the promise
+
+			try {
+				const response = await dispatch(createProduct(values)).unwrap();
+
+				if (response) {
+					toast.success('Product created successfully');
+					form.reset(defaultValues);
+				}
+			} catch (error) {
+				toast.error('Failed to create product: ' + (error as Error).message);
+			}
 		}
-	}
+
+		if (type === 'update' && data) {
+			try {
+				const response = await dispatch(
+					updateProduct({ ...values, id: data.id })
+				).unwrap();
+
+				if (response) {
+					toast.success('Product updated successfully');
+
+					form.reset(defaultValues);
+				}
+			} catch (error) {
+				console.log(error);
+				toast.error('Failed to update product: ' + (error as Error).message);
+			}
+		}
+	};
 
 	return (
 		<Form {...form}>
@@ -126,9 +164,9 @@ const ProductsForm = ({ type, data }: ProductsFormProps) => {
 						Cancel
 					</Button>
 					<SheetFooter>
-						<SheetClose asChild>
-							<Button type='submit'>Create</Button>
-						</SheetClose>
+						<Button type='submit'>
+							{type === 'create' ? 'Create' : 'Update'}
+						</Button>
 					</SheetFooter>
 				</div>
 			</form>

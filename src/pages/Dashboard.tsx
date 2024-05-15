@@ -7,7 +7,6 @@ const Dashboard = () => {
 			<p>
 				Welcome to your CRM dashboard! 🎉 We're thrilled to have you here. This
 				is your hub for managing all your customer relationships efficiently.
-				Need assistance or have any questions? Don't hesitate to reach out.{' '}
 			</p>
 			<div className='flex gap-3 flex-wrap'>
 				{tablesDetails.map(table => (

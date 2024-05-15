@@ -1,3 +1,4 @@
+/* eslint-disable no-mixed-spaces-and-tabs */
 import { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -13,7 +14,7 @@ import {
 	FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { SheetFooter, SheetClose } from '@/components/ui/sheet';
+import { SheetFooter } from '@/components/ui/sheet';
 import { AppDispatch, RootState } from '@/state/store';
 import { useDispatch, useSelector } from 'react-redux';
 import Spinner from '../shared/Spinner';
@@ -36,6 +37,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from '@radix-ui/react-icons';
 import { cn } from '@/lib/utils';
 import { getCustomers } from '@/state/customers/customersSlice';
+import { createSale, updateSale } from '@/state/sales/salesSlice';
+import toast from 'react-hot-toast';
 
 const formSchema = z.object({
 	date: z.date({
@@ -45,14 +48,9 @@ const formSchema = z.object({
 	customerId: z.string(),
 });
 
-const defaultValues = {
-	total: 0,
-	customerId: '',
-};
-
 interface CustomersFormProps {
 	type: 'create' | 'update';
-	data?: Customer;
+	data?: Sale;
 }
 
 const SalesForm = ({ type, data }: CustomersFormProps) => {
@@ -65,17 +63,61 @@ const SalesForm = ({ type, data }: CustomersFormProps) => {
 		dispatch(getCustomers());
 	}, [dispatch]);
 
+	console.log(data)
+
+	const defaultValues =
+		type === 'update' && data
+			? {
+					customerId: data.customer_id?.id?.toString(), // Assuming customerId is a string
+					date: data.date ? new Date(data.date) : undefined,
+					total: data.total || 0,
+			  }
+			: {
+					date: undefined,
+					total: 0,
+					customerId: '',
+			  };
+
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues,
 	});
 
-	function onSubmit(values: z.infer<typeof formSchema>) {
-		console.log(values);
+	const onSubmit = async (values: z.infer<typeof formSchema>) => {
 		if (type === 'create' && !data) {
-			console.log('create');
+			// use unwrap to get the actual value from the promise
+
+			try {
+				const response = await dispatch(
+					createSale({ ...values, customer_id: parseInt(values.customerId) })
+				).unwrap();
+
+				if (response) {
+					toast.success('Sale created successfully');
+					form.reset(defaultValues);
+				}
+			} catch (error) {
+				toast.error('Failed to create sale: ' + (error as Error).message);
+			}
 		}
-	}
+
+		if (type === 'update' && data) {
+			try {
+				const response = await dispatch(
+					updateSale({ ...values, id: data.id })
+				).unwrap();
+
+				if (response) {
+					toast.success('Sale updated successfully');
+
+					form.reset(defaultValues);
+				}
+			} catch (error) {
+				console.log(error);
+				toast.error('Failed to update sale: ' + (error as Error).message);
+			}
+		}
+	};
 
 	if (error) return <p>Error: {error}</p>;
 
@@ -171,9 +213,9 @@ const SalesForm = ({ type, data }: CustomersFormProps) => {
 						Cancel
 					</Button>
 					<SheetFooter>
-						<SheetClose asChild>
-							<Button type='submit'>Create</Button>
-						</SheetClose>
+						<Button type='submit'>
+							{type === 'create' ? 'Create' : 'Update'}
+						</Button>
 					</SheetFooter>
 				</div>
 			</form>

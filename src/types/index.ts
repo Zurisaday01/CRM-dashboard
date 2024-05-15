@@ -6,7 +6,7 @@ declare global {
 		name: string;
 		last_name: string;
 		email: string;
-		created_by: number;
+		created_at: Date | string;
 	}
 
 	interface Product {
@@ -15,7 +15,7 @@ declare global {
 		description: string;
 		price: number;
 		stock: number;
-		created_by: number;
+		created_at: Date | string;
 	}
 	interface Customer {
 		id: number;
@@ -24,16 +24,34 @@ declare global {
 		email: string;
 		phone: string;
 		date_of_birth: Date | string;
-		address: Date | null;
-		updated_at: Date | null;
+		address: string;
+		created_by: User;
+	}
+
+	interface CreateCustomer {
+		id: number;
+		name: string;
+		last_name: string;
+		email: string;
+		phone: string;
+		date_of_birth: Date | string;
+		address: string;
 		created_by: number;
 	}
 
 	interface Sale {
 		id: number;
+		customer_id: Customer;
+		date: Date | null;
+		total: number;
+		created_at: Date | string;
+	}
+
+	interface CreateSale {
+		id: number;
 		customer_id: number;
 		date: Date | null;
 		total: number;
-		updated_at: Date | null;
+		created_at: Date | string;
 	}
 }

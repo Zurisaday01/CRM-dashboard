@@ -1,3 +1,4 @@
+/* eslint-disable no-mixed-spaces-and-tabs */
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -12,7 +13,12 @@ import {
 	FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { SheetFooter, SheetClose } from '@/components/ui/sheet';
+import { SheetFooter } from '@/components/ui/sheet';
+import { AppDispatch } from '@/state/store';
+import { useDispatch } from 'react-redux';
+import { createUser, updateUser } from '@/state/users/usersSlice';
+import toast from 'react-hot-toast';
+import { objectToCamel } from 'ts-case-convert';
 
 const formSchema = z.object({
 	name: z.string().min(2, {
@@ -26,29 +32,61 @@ const formSchema = z.object({
 	}),
 });
 
-const defaultValues = {
-	name: '',
-	lastName: '',
-	email: '',
-};
-
 interface UsersFormProps {
 	type: 'create' | 'update';
 	data?: User;
 }
 
 const UsersForm = ({ type, data }: UsersFormProps) => {
+	const dispatch = useDispatch<AppDispatch>();
+
+	// Default values for the form outside of the form hook
+	const defaultValues =
+		type === 'update' && data
+			? objectToCamel(data)
+			: {
+					name: '',
+					lastName: '',
+					email: '',
+			  };
+
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues,
 	});
 
-	function onSubmit(values: z.infer<typeof formSchema>) {
-		console.log(values);
+	const onSubmit = async (values: z.infer<typeof formSchema>) => {
 		if (type === 'create' && !data) {
-			console.log('create');
+			// use unwrap to get the actual value from the promise
+
+			try {
+				const response = await dispatch(createUser(values)).unwrap();
+
+				if (response) {
+					toast.success('User created successfully');
+					form.reset(defaultValues);
+				}
+			} catch (error) {
+				toast.error('Failed to create user: ' + (error as Error).message);
+			}
 		}
-	}
+		if (type === 'update' && data) {
+			try {
+				const response = await dispatch(
+					updateUser({ ...values, id: data.id })
+				).unwrap();
+
+				if (response) {
+					toast.success('User updated successfully');
+
+					form.reset(defaultValues);
+				}
+			} catch (error) {
+				console.log(error);
+				toast.error('Failed to update user: ' + (error as Error).message);
+			}
+		}
+	};
 
 	return (
 		<Form {...form}>
@@ -106,9 +144,9 @@ const UsersForm = ({ type, data }: UsersFormProps) => {
 						Cancel
 					</Button>
 					<SheetFooter>
-						<SheetClose asChild>
-							<Button type='submit'>Create</Button>
-						</SheetClose>
+						<Button type='submit'>
+							{type === 'create' ? 'Create' : 'Update'}
+						</Button>
 					</SheetFooter>
 				</div>
 			</form>

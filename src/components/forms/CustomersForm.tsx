@@ -1,3 +1,4 @@
+/* eslint-disable no-mixed-spaces-and-tabs */
 import { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -13,7 +14,7 @@ import {
 	FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { SheetFooter, SheetClose } from '@/components/ui/sheet';
+import { SheetFooter } from '@/components/ui/sheet';
 import { AppDispatch, RootState } from '@/state/store';
 import { useDispatch, useSelector } from 'react-redux';
 import Spinner from '../shared/Spinner';
@@ -36,6 +37,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from '@radix-ui/react-icons';
 import { cn } from '@/lib/utils';
 import { getUsers } from '@/state/users/usersSlice';
+import toast from 'react-hot-toast';
+import { createCustomer, updateCustomer } from '@/state/customers/customersSlice';
+import { objectToCamel } from 'ts-case-convert';
 
 const formSchema = z.object({
 	name: z.string().min(2, {
@@ -53,20 +57,11 @@ const formSchema = z.object({
 	address: z.string().min(2, {
 		message: 'Address must be at least 2 characters.',
 	}),
-	dob: z.date({
+	dateOfBirth: z.date({
 		required_error: 'A date of birth is required.',
 	}),
 	createdBy: z.string(),
 });
-
-const defaultValues = {
-	name: '',
-	lastName: '',
-	email: '',
-	phone: '',
-	address: '',
-	createdBy: '',
-};
 
 interface CustomersFormProps {
 	type: 'create' | 'update';
@@ -84,17 +79,67 @@ const CustomersForm = ({ type, data }: CustomersFormProps) => {
 		dispatch(getUsers());
 	}, [dispatch]);
 
+
+	const defaultValues =
+		type === 'update' && data
+			? {
+					...objectToCamel(data),
+					dateOfBirth:
+						typeof data.date_of_birth === 'string'
+							? new Date(data.date_of_birth)
+							: data.date_of_birth,
+					createdBy: data.created_by?.id?.toString(), 
+			  }
+			: {
+					name: '',
+					lastName: '',
+					email: '',
+					phone: '',
+					address: '',
+					createdBy: '',
+			  };
+
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues,
 	});
 
-	function onSubmit(values: z.infer<typeof formSchema>) {
-		console.log(values);
+	const onSubmit = async (values: z.infer<typeof formSchema>) => {
 		if (type === 'create' && !data) {
-			console.log('create');
+			// use unwrap to get the actual value from the promise
+			console.log(values);
+			try {
+				const response = await dispatch(
+					createCustomer({ ...values, created_by: parseInt(values.createdBy) })
+				).unwrap();
+
+				if (response) {
+					toast.success('Customer created successfully');
+					form.reset(defaultValues);
+				}
+			} catch (error) {
+				console.log(error);
+				toast.error('Failed to create customer: ' + (error as Error).message);
+			}
 		}
-	}
+
+		if (type === 'update' && data) {
+			try {
+				const response = await dispatch(
+					updateCustomer({ ...values, id: data.id })
+				).unwrap();
+
+				if (response) {
+					toast.success('Customer updated successfully');
+
+					form.reset(defaultValues);
+				}
+			} catch (error) {
+				console.log(error);
+				toast.error('Failed to update customer: ' + (error as Error).message);
+			}
+		}
+	};
 
 	if (error) return <p>Error: {error}</p>;
 
@@ -177,7 +222,7 @@ const CustomersForm = ({ type, data }: CustomersFormProps) => {
 
 				<FormField
 					control={form.control}
-					name='dob'
+					name='dateOfBirth'
 					render={({ field }) => (
 						<FormItem className='flex flex-col w-full'>
 							<FormLabel>Date of birth</FormLabel>
@@ -249,9 +294,9 @@ const CustomersForm = ({ type, data }: CustomersFormProps) => {
 						Cancel
 					</Button>
 					<SheetFooter>
-						<SheetClose asChild>
-							<Button type='submit'>Create</Button>
-						</SheetClose>
+						<Button type='submit'>
+							{type === 'create' ? 'Create' : 'Update'}
+						</Button>
 					</SheetFooter>
 				</div>
 			</form>

@@ -1,14 +1,24 @@
 import { useEffect } from 'react';
 import { AppDispatch, RootState } from '../state/store';
 import { useDispatch, useSelector } from 'react-redux';
-import { AgGridReact } from 'ag-grid-react'; // AG Grid Component
-import 'ag-grid-community/styles/ag-grid.css'; // Mandatory CSS required by the grid
-import 'ag-grid-community/styles/ag-theme-quartz.css'; // Optional Theme applied to the grid
-import { ColDef } from 'ag-grid-community';
 import Spinner from '@/components/shared/Spinner';
-import { getSales } from '../state/sales/salesSlice';
+import { deleteSale, getSales } from '../state/sales/salesSlice';
 import PageHeader from '@/components/shared/PageHeader';
 import SalesForm from '@/components/forms/SalesForm';
+
+import {
+	Table,
+	TableBody,
+	TableCaption,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { format } from 'date-fns';
+import toast from 'react-hot-toast';
+import DeleteEntry from '@/components/shared/DeleteEntry';
+import UpdateSheet from '@/components/shared/UpdateSheet';
 
 const SalesPage = () => {
 	const dispatch = useDispatch<AppDispatch>();
@@ -16,36 +26,21 @@ const SalesPage = () => {
 		(state: RootState) => state.sales
 	);
 
-	const colDefs: ColDef[] = [
-		{ field: 'id', headerName: 'ID', sortable: true, flex: 1 },
-		{ field: 'created_at', headerName: 'Created At', sortable: true, flex: 1 },
-		{
-			field: 'customer_name',
-			headerName: 'Customer Name',
-			sortable: true,
-			flex: 1,
-			valueGetter: function (params) {
-				return (
-					params.data.customer_id.name + ' ' + params.data.customer_id.last_name
-				);
-			},
-		},
-		{
-			field: 'customer_email',
-			headerName: 'Customer Email',
-			sortable: true,
-			flex: 1,
-			valueGetter: function (params) {
-				return params.data.customer_id.email;
-			},
-		},
-		{ field: 'date', headerName: 'Date', sortable: true, flex: 1 },
-		{ field: 'total', headerName: 'Total', sortable: true, flex: 1 },
-	];
-
 	useEffect(() => {
 		dispatch(getSales());
 	}, [dispatch]);
+
+	const handleDelete = async (id: number) => {
+		try {
+			const response = await dispatch(deleteSale({ id })).unwrap();
+
+			if (response) {
+				toast.success('Sale deleted successfully');
+			}
+		} catch (error) {
+			toast.error('Failed to delete sale: ' + (error as Error).message);
+		}
+	};
 
 	return (
 		<section>
@@ -60,9 +55,40 @@ const SalesPage = () => {
 					<Spinner />
 				</div>
 			) : (
-				<div className='ag-theme-quartz w-full h-[300px]'>
-					<AgGridReact rowData={sales} columnDefs={colDefs} />
-				</div>
+				<Table className='w-full bg-white rounded-md'>
+					<TableCaption>A list of your sales</TableCaption>
+					<TableHeader>
+						<TableRow>
+							<TableHead className='w-[100px]'>ID</TableHead>
+							<TableHead>Total</TableHead>
+							<TableHead>Customer</TableHead>
+							<TableHead>Date</TableHead>
+							<TableHead>Actions</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{sales.map((sale: Sale) => (
+							<TableRow key={sale.id}>
+								<TableCell>{sale.id}</TableCell>
+								<TableCell>${sale.total}</TableCell>
+								<TableCell>
+									{sale.customer_id.name} {sale.customer_id.last_name}
+								</TableCell>
+								<TableCell>{format(sale.date as Date, 'PPP')}</TableCell>
+								<TableCell className='flex gap-3'>
+									<UpdateSheet
+										entity='Sale'
+										form={<SalesForm type='update' data={sale} />}
+									/>
+									<DeleteEntry
+										entry='sale'
+										onClick={() => handleDelete(sale.id)}
+									/>
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
 			)}
 		</section>
 	);

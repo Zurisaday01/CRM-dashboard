@@ -1,9 +1,10 @@
+import { objectToSnake } from 'ts-case-convert';
 import supabase from './supabase';
 
 export const getCustomers = async () => {
 	const { data, error } = await supabase
 		.from('customers')
-		.select('*, users(name, last_name)');
+		.select('*, created_by(id, name, last_name)');
 
 	if (error) {
 		console.error(error);
@@ -15,7 +16,7 @@ export const getCustomers = async () => {
 export const getCustomerById = async (id: string) => {
 	const { data, error } = await supabase
 		.from('customers')
-		.select('*, users(name, last_name, emal)')
+		.select('*, created_by(id, name, last_name)')
 		.eq('id', id)
 		.single();
 
@@ -27,15 +28,28 @@ export const getCustomerById = async (id: string) => {
 	return data;
 };
 
+export const createCustomer = async (customer: Partial<CreateCustomer>) => {
+	const { data, error } = await supabase
+		.from('customers')
+		.insert(objectToSnake(customer))
+		.select('*, created_by(id, name, last_name)')
+		.single();
+
+	if (error) {
+		throw new Error('Customer could not be created');
+	}
+	return data;
+};
+
 export const updateCustomer = async (
 	id: string,
 	customer: Partial<Customer>
 ) => {
 	const { data, error } = await supabase
 		.from('customers')
-		.update(customer)
+		.update(objectToSnake(customer))
 		.eq('id', id)
-		.select()
+		.select('*, created_by(id, name, last_name)')
 		.single();
 
 	if (error) {
@@ -47,14 +61,11 @@ export const updateCustomer = async (
 
 export const deleteCustomer = async (id: string) => {
 	// REMEMBER RLS POLICIES
-	const { data, error } = await supabase
-		.from('customers')
-		.delete()
-		.eq('id', id);
+	const { error } = await supabase.from('customers').delete().eq('id', id);
 
 	if (error) {
 		console.error(error);
 		throw new Error('Customer could not be deleted');
 	}
-	return data;
+	return { id };
 };
