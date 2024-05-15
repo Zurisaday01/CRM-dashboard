@@ -60,6 +60,7 @@ export const updateCustomer = async (
 };
 
 export const deleteCustomer = async (id: string) => {
+	console.log('id', id);
 	// REMEMBER RLS POLICIES
 	const { error } = await supabase.from('customers').delete().eq('id', id);
 
